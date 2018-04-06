@@ -44,7 +44,7 @@ You can specify the following options:
 
 This script may fail on courses with empty containers.
 
-Last update: March 23rd, 2018
+Last update: April 6th, 2018
 """
 
 # We need lists of container nodes and leaf nodes so we can tell
@@ -116,7 +116,7 @@ def describeLinkData(newlink):
     if newlink['href'].endswith('.ps'):     newlink['text'] += ' (PostScript file)'
     if newlink['href'].endswith('.zip'):    newlink['text'] += ' (zip file)'
     if newlink['href'].endswith('.tar.gz'): newlink['text'] += ' (tarred gzip file)'
-    if newlink['href'].endswith('.gz'):     newlink['text'] += ' (gzip file)'
+    elif newlink['href'].endswith('.gz'):   newlink['text'] += ' (gzip file)'
     return newlink
 
 # get list of links from HTML pages, with href and link text
