@@ -4,7 +4,7 @@ import zipfile
 import argparse
 from glob import glob
 from bs4 import BeautifulSoup
-import PyPDF2
+import pdfrw
 import unicodecsv as csv # https://pypi.python.org/pypi/unicodecsv/0.14.1
 
 
@@ -32,19 +32,11 @@ def getLinks(filename, args, dirpath):
 
     links = []
     fullname = os.path.join(dirpath or '', filename)
-    PDFFile = open(fullname,'rb')
 
     try:
-        PDF = PyPDF2.PdfFileReader(PDFFile)
-        pages = PDF.getNumPages()
-    except NotImplementedError:
-        print(os.path.basename(filename) + ' uses an unsupported encoding.')
-        return [{
-            'filename': os.path.basename(filename),
-            'href': 'Could not decode - unsupported encoding.',
-            'page': "n/a"
-        }]
-    except PyPDF2.utils.PdfReadError:
+        PDF = pdfrw.PdfReader(fullname)
+        pages = PDF.Root.Pages.Kids
+    except ValueError:
         print(os.path.basename(filename) + ' could not be decoded.')
         return [{
             'filename': os.path.basename(filename),
@@ -52,25 +44,16 @@ def getLinks(filename, args, dirpath):
             'page': "n/a"
         }]
 
-    key = '/Annots'
-    uri = '/URI'
-    ank = '/A'
-
-    for page in range(pages):
-
-        pageSliced = PDF.getPage(page)
-        pageObject = pageSliced.getObject()
-
-        if key in pageObject:
-            ann = pageObject[key]
+    for index, page in enumerate(pages):
+        if '/Annots' in page:
+            ann = page['/Annots']
             for a in ann:
-                u = a.getObject()
-                if ank in u:
-                    if uri in u[ank]:
+                if '/A' in a:
+                    if '/URI' in a['/A']:
                         links.append({
                             'filename': os.path.basename(filename),
-                            'href': u[ank][uri],
-                            'page': (page+1)
+                            'href': a['/A']['/URI'],
+                            'page': (index+1)
                         })
 
     # Return a list of dicts full of link info
