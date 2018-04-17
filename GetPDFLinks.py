@@ -32,7 +32,6 @@ def getLinks(filename, args, dirpath):
 
     links = []
     fullname = os.path.join(dirpath or '', filename)
-    subprocess.call(['qpdf', '--decrypt', fullname, fullname + '.new'])
 
     try:
         PDF = pdfrw.PdfReader(fullname)
