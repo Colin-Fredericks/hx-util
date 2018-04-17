@@ -1,12 +1,12 @@
 import sys
 import os
+import subprocess
 import zipfile
 import argparse
 from glob import glob
 from bs4 import BeautifulSoup
 import pdfrw
 import unicodecsv as csv # https://pypi.python.org/pypi/unicodecsv/0.14.1
-
 
 instructions = """
 Usage:
@@ -25,22 +25,46 @@ Options:
   -o  Set an output filename as the next argument.
   -l  Returns a Python list. Used when called by other scripts.
 
-Last update: March 30th 2018
+Last update: April 17th 2018
 """
 
 def getLinks(filename, args, dirpath):
 
     links = []
     fullname = os.path.join(dirpath or '', filename)
+    subprocess.call(['qpdf', '--decrypt', fullname, fullname + '.new'])
 
     try:
         PDF = pdfrw.PdfReader(fullname)
         pages = PDF.Root.Pages.Kids
     except ValueError:
-        print(os.path.basename(filename) + ' could not be decoded.')
+        # This might be an encrypted file. Try decrypting it.
+        print('trying to decrypt ' + fullname)
+        try:
+            subprocess.call(['qpdf', '--decrypt', fullname, fullname + '.new'])
+        except FileNotFoundError:
+            print('qpdf is not installed. Could not attempt to decrypt.')
+            return [{
+                'filename': os.path.basename(filename),
+                'href': 'Could not decode - possibly encrypted file',
+                'page': "n/a"
+            }]
+        PDF = pdfrw.PdfReader(fullname + '.new')
+        if not PDF.Encrypt:
+            pages = PDF.Root.Pages.Kids
+        else:
+            print(os.path.basename(filename) + ' could not be decrypted.')
+            return [{
+                'filename': os.path.basename(filename),
+                'href': 'Cannot get URL from encrypted file.',
+                'page': "n/a"
+            }]
+
+    except:
+        print('Unknown error opening ' + os.path.basename(filename) )
         return [{
             'filename': os.path.basename(filename),
-            'href': 'Could not decode - PDF Read Error.',
+            'href': 'Unknown error opening this file.',
             'page': "n/a"
         }]
 
@@ -50,11 +74,18 @@ def getLinks(filename, args, dirpath):
             for a in ann:
                 if '/A' in a:
                     if '/URI' in a['/A']:
-                        links.append({
-                            'filename': os.path.basename(filename),
-                            'href': a['/A']['/URI'],
-                            'page': (index+1)
-                        })
+                        if not PDF.Encrypt:
+                            links.append({
+                                'filename': os.path.basename(filename),
+                                'href': a['/A']['/URI'],
+                                'page': (index+1)
+                            })
+                        else:
+                            links.append({
+                                'filename': os.path.basename(filename),
+                                'href': 'Cannot get URL from encrypted file.',
+                                'page': (index+1)
+                            })
 
     # Return a list of dicts full of link info
     return links
@@ -134,7 +165,7 @@ def getPDFLinks(args):
     # Otherwise, output a file and print some info.
     print( '\nChecked '
         + str(filecount)
-        + ' .docx file'
+        + ' .pdf file'
         + ('s' if filecount > 1 else '')
         +  ' for links.' )
 
