@@ -1,11 +1,9 @@
 import sys
 import os
 import subprocess
-import zipfile
 import argparse
 import logging
 from glob import glob
-from bs4 import BeautifulSoup
 import pdfrw
 import unicodecsv as csv # https://pypi.python.org/pypi/unicodecsv/0.14.1
 
@@ -18,7 +16,7 @@ Extract all hyperlinks from a .pdf file,
 including link destination and linked text or object,
 and store them in a .csv file.
 If you feed it a folder, it includes all the files in the folder.
-Excel mangles unicode, so you will need to open the csv in Google Drive.
+Excel mangles unicode, so you may need to open the csv in Google Drive.
 
 Options:
   -h  Print this message and quit.
@@ -26,7 +24,7 @@ Options:
   -o  Set an output filename as the next argument.
   -l  Returns a Python list. Used when called by other scripts.
 
-Last update: April 17th 2018
+Last update: April 18th 2018
 """
 
 def getLinks(filename, args, dirpath):
