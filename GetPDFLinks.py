@@ -33,23 +33,21 @@ def getLinks(filename, args, dirpath):
 
     links = []
     fullname = os.path.join(dirpath or '', filename)
+    fil = os.path.basename(filename)
+    href = 'Unknown error opening this file.'
+    page = 'n/a'
 
     try:
         PDF = pdfrw.PdfReader(fullname)
         pages = PDF.Root.Pages.Kids
     except ValueError:
         # This might be an encrypted file. Try decrypting it.
-        print('trying to decrypt ' + fullname)
-
         try:
             subprocess.call(['qpdf', '--decrypt', fullname, fullname + '.new'])
         except FileNotFoundError:
-            print('qpdf is not installed. Could not attempt to decrypt.')
-            return [{
-                'filename': os.path.basename(filename),
-                'href': 'Could not decode - possibly encrypted file',
-                'page': "n/a"
-            }]
+            print('qpdf is not installed. Could not attempt to decrypt ' + filename)
+            href = 'Could not open - possibly encrypted file.'
+            return [{'filename': fil, 'href': href, 'page': page}]
 
         # Read in and then delete the new unencrypted file
         PDF = pdfrw.PdfReader(fullname + '.new')
@@ -57,22 +55,16 @@ def getLinks(filename, args, dirpath):
 
         if not PDF.Encrypt:
             pages = PDF.Root.Pages.Kids
-            print('Decryption successful.')
-        else:
-            print(os.path.basename(filename) + ' could not be decrypted.')
-            return [{
-                'filename': os.path.basename(filename),
-                'href': 'Cannot get URL from encrypted file.',
-                'page': "n/a"
-            }]
+            print('Temporarily decrypted ' + filename)
 
     except:
         print('Unknown error opening ' + os.path.basename(filename) )
-        return [{
-            'filename': os.path.basename(filename),
-            'href': 'Unknown error opening this file.',
-            'page': "n/a"
-        }]
+        return [{'filename': fil, 'href': href, 'page': page}]
+
+    if PDF.Encrypt:
+        print('Could not decrypt ' + filename)
+        href = 'Cannot get URLs from encrypted file.'
+        return [{'filename': fil, 'href': href, 'page': page}]
 
     for index, page in enumerate(pages):
         if '/Annots' in page:
