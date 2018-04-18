@@ -3,6 +3,7 @@ import os
 import subprocess
 import zipfile
 import argparse
+import logging
 from glob import glob
 from bs4 import BeautifulSoup
 import pdfrw
@@ -39,6 +40,7 @@ def getLinks(filename, args, dirpath):
     except ValueError:
         # This might be an encrypted file. Try decrypting it.
         print('trying to decrypt ' + fullname)
+
         try:
             subprocess.call(['qpdf', '--decrypt', fullname, fullname + '.new'])
         except FileNotFoundError:
@@ -48,9 +50,14 @@ def getLinks(filename, args, dirpath):
                 'href': 'Could not decode - possibly encrypted file',
                 'page': "n/a"
             }]
+
+        # Read in and then delete the new unencrypted file
         PDF = pdfrw.PdfReader(fullname + '.new')
+        os.remove(fullname + '.new')
+
         if not PDF.Encrypt:
             pages = PDF.Root.Pages.Kids
+            print('Decryption successful.')
         else:
             print(os.path.basename(filename) + ' could not be decrypted.')
             return [{
@@ -76,7 +83,7 @@ def getLinks(filename, args, dirpath):
                         if not PDF.Encrypt:
                             links.append({
                                 'filename': os.path.basename(filename),
-                                'href': a['/A']['/URI'],
+                                'href': a['/A']['/URI'][1:-1],
                                 'page': (index+1)
                             })
                         else:
@@ -85,6 +92,7 @@ def getLinks(filename, args, dirpath):
                                 'href': 'Cannot get URL from encrypted file.',
                                 'page': (index+1)
                             })
+
 
     # Return a list of dicts full of link info
     return links
@@ -122,6 +130,9 @@ def getPDFLinks(args):
     filecount = 0
     linklist = []
     target_is_folder = False
+
+    # Turn off warning messages from pdfrw.
+    logging.getLogger('pdfrw').setLevel(logging.CRITICAL)
 
     for name in file_names:
         # Make sure single files exist.
